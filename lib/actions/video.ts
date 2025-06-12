@@ -3,12 +3,13 @@
 import { BUNNY } from "@/constants"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
-import { apiFetch, getEnv, withErrorHandling } from "@/lib/utils"
+import { apiFetch, doesTitleMatch, getEnv, withErrorHandling } from "@/lib/utils"
 import { db } from "@/drizzle/db"
-import { videos } from "@/drizzle/schema"
+import { user, videos } from "@/drizzle/schema"
 import { revalidatePath } from "next/cache"
 import aj from "@/lib/arcjet"
-
+import { fixedWindow, request } from "@arcjet/next"
+import { and, eq, or, sql } from "drizzle-orm"
 
 
 const VIDEO_STREAM_BASE_URL = BUNNY.STREAM_BASE_URL;
@@ -31,6 +32,14 @@ const getSessionUserId = async (): Promise<string | null> => {
 
 const revalidatePaths = (paths: string[]) => {
     paths.forEach((path) => revalidatePath(path))
+}
+
+const buildVideoWithUserQuery =() => {
+    return db 
+    .select({
+        video: videos,
+        user: { id: user.id, name: user.name, image: user.image },
+    })
 }
 
 const validateWithArcjet = async (fingerprint: string) => {
@@ -111,6 +120,9 @@ type VideoDetails = {
 
 export const saveVideoDetails = withErrorHandling(async (videoDetails: VideoDetails) => {
     const userId = await getSessionUserId();
+    if (!userId) {
+        throw new Error('Unauthenticated');
+    }
     await validateWithArcjet(userId);
     const videoResponse = await apiFetch<BunnyVideoResponse>(
         `${VIDEO_STREAM_BASE_URL}/${BUNNY_LIBRARY_ID}/videos/${videoDetails.videoId}`,
@@ -136,3 +148,58 @@ export const saveVideoDetails = withErrorHandling(async (videoDetails: VideoDeta
 
     return { videoId: videoDetails.videoId }
 })
+
+
+export const getAllVideos = withErrorHandling(async (
+    searchQuery: string = '',
+    sortFilter?: string,
+    pageNumber: number = 1,
+    pageSize: number = 8,
+
+) => {
+    const session = await auth.api.getSession({ headers: await headers() })
+    const currentUserId = session?.user?.id;
+
+    const canSeeTheVideos = or(
+        eq(videos.visibility, 'public'),
+        eq(videos.userId, currentUserId!),
+    );
+
+    const whereCondition = searchQuery.trim()
+    ? and(
+        canSeeTheVideos,
+        doesTitleMatch(videos, searchQuery)
+    )
+    : canSeeTheVideos;
+
+    const [{ totalCount}] = await db
+    .select({totalCount: sql<number>`count(*)`})
+    .from(videos)
+    .where(whereCondition);
+
+    const totalVideos = Number(totalCount || 0);
+    const totalPages = Math.ceil(totalVideos / pageSize);
+
+    const videoRecords = await buildVideoWithUserQuery()
+    .where(whereCondition)
+    .orderBy(
+        sortFilter
+        ? getOrderByClause(sortFilter)
+        : sql`${videos.createdAt} DESC`
+    ).limit(pageSize)
+    .offset((pageNumber -1) * pageSize);
+
+    return {
+        videos: videoRecords,
+        pagination: {
+            currentPage: pageNumber,
+            totalPages,
+            totalVideos,
+            pageSize
+        }
+    }
+})
+
+function getOrderByClause(sortFilter: string): any {
+    throw new Error("Function not implemented.")
+}

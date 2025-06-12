@@ -7,7 +7,7 @@ import { MAX_THUMBNAIL_SIZE, MAX_VIDEO_SIZE } from "@/constants";
 import { getThumbnailUploadUrl, getVideoUploadUrl, saveVideoDetails } from "@/lib/actions/video";
 import { useFileInputs } from "@/lib/hooks/userFileInputs";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, RefObject, useEffect, useState } from "react";
 
 const uploaedFileToBunny = async (file: File, uploadUrl: string, accessKey: string) => {
     return fetch(uploadUrl, {
@@ -84,7 +84,7 @@ const Page = () => {
                 uploadUrl: thumbnailUploadUrl,
                 accessKey: thumbnailAccessKey,
                 cdnUrl: thumbnailCdnUrl,
-            } = await getThumbnailUploadUrl(videoId);
+            } = await getThumbnailUploadUrl(String(videoId));
 
             if (!thumbnailUploadUrl || !thumbnailAccessKey) {
                 throw new Error('Failed to get thumbnail upload URL.');
@@ -179,3 +179,9 @@ const Page = () => {
 }
 
 export default Page;
+
+interface FileInputProps {
+    // ...other props
+    inputRef?: RefObject<HTMLInputElement | null>;
+    // ...other props
+}

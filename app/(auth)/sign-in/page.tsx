@@ -7,11 +7,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const Page = () => {
+    
     const handleSignIn = async () => {
         return await authClient.signIn.social({ provider: 'google' });
     }
 
-
+    // const handleSignOut = async () => {
+    //     return await authClient.signOut({
+    //         fetchOptions: {
+    //             onSuccess: () => {
+    //                 window.location.href = '/sign-in';
+    //             }
+    //         }
+    //     });
+    // }
 
         return (
             <main className='sign-in'>
