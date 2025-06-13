@@ -16,6 +16,7 @@ interface VideoCardProps {
     views: number;
     visibility?: 'public' | 'private';
     duration?: number; // in seconds
+    
 }
 
 const VideoCard = ({ id, title, thumbnail, createdAt, userImg, username, views, visibility, duration }: VideoCardProps) => {

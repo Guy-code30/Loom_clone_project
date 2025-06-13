@@ -9,7 +9,8 @@ import { user, videos } from "@/drizzle/schema"
 import { revalidatePath } from "next/cache"
 import aj from "@/lib/arcjet"
 import { fixedWindow, request } from "@arcjet/next"
-import { and, eq, or, sql } from "drizzle-orm"
+import { and, eq, or, sql} from "drizzle-orm"
+
 
 
 const VIDEO_STREAM_BASE_URL = BUNNY.STREAM_BASE_URL;
@@ -19,7 +20,6 @@ const BUNNY_LIBRARY_ID = getEnv('BUNNY_LIBRARY_ID');
 const ACCESS_KEYS = {
     streamAccessKey: getEnv('BUNNY_STREAM_ACCESS_KEY'),
     storageAccessKey: getEnv('BUNNY_STORAGE_ACCESS_KEY'),
-
 }
 
 const getSessionUserId = async (): Promise<string | null> => {
@@ -40,6 +40,8 @@ const buildVideoWithUserQuery =() => {
         video: videos,
         user: { id: user.id, name: user.name, image: user.image },
     })
+    .from(videos)
+    .leftJoin(user, eq(user.id, videos.userId))
 }
 
 const validateWithArcjet = async (fingerprint: string) => {
@@ -172,8 +174,8 @@ export const getAllVideos = withErrorHandling(async (
     )
     : canSeeTheVideos;
 
-    const [{ totalCount}] = await db
-    .select({totalCount: sql<number>`count(*)`})
+    const [{ totalCount }] = await db
+    .select({ totalCount: sql<number>`count(*)` })
     .from(videos)
     .where(whereCondition);
 
@@ -203,3 +205,18 @@ export const getAllVideos = withErrorHandling(async (
 function getOrderByClause(sortFilter: string): any {
     throw new Error("Function not implemented.")
 }
+
+
+
+export const getVideoById = withErrorHandling(async(videoId: string) => {
+    const [videoRecord] = await db
+        .select({
+            video: videos,
+            user: { id: user.id, name: user.name, image: user.image },
+        })
+        .from(videos)
+        .leftJoin(user, eq(user.id, videos.userId))
+        .where(eq(videos.id, videoId));
+
+    return videoRecord
+})

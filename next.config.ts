@@ -31,7 +31,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(_request: NextRequest) {
   const response = NextResponse.next();
-  response.headers.set('Access-Control-Allow-Origin', 'http://localhost:3002');
+  response.headers.set('Access-Control-Allow-Origin', 'http://localhost:3000');
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
